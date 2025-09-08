@@ -1,29 +1,35 @@
 <!doctype html>
 <html lang="th">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Three.js — Load GLB Example</title>
-<style>
-  html,body{height:100%;margin:0}
-  #app{width:100%;height:100vh;overflow:hidden}
-  #ui{position:absolute;left:12px;top:12px;padding:8px 12px;background:rgba(0,0,0,0.6);color:#fff;border-radius:8px;font-family:sans-serif;z-index:10}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Three.js GLB Demo</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden}
+    #app{width:100%;height:100vh;display:block}
+    #ui{
+      position:absolute;top:10px;left:10px;
+      background:rgba(0,0,0,0.6);color:#fff;
+      padding:6px 10px;border-radius:6px;
+      font-family:sans-serif;z-index:10
+    }
+  </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="ui">Progress: <span id="prog">0%</span></div>
+<div id="ui">Loading: <span id="progress">0%</span></div>
 
 <script type="module">
 import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
 
-const MODEL_URL = 'https://raw.githubusercontent.com/IAMAOD/ICG/main/horse_bust.glb'; // ตัวอย่าง URL
+const MODEL_URL = './horse_bust.glb';  // ✅ ใช้ relative path
 
 const container = document.getElementById('app');
-const progEl = document.getElementById('prog');
+const progEl = document.getElementById('progress');
 
+// scene, camera, renderer
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f0f0);
 
@@ -36,8 +42,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 container.appendChild(renderer.domElement);
 
+// controls
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.6, 0);
+controls.target.set(0,0.6,0);
 controls.enableDamping = true;
 
 // lights
@@ -47,66 +54,60 @@ dl.position.set(5,10,7.5);
 scene.add(dl);
 
 // ground
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(20,20), new THREE.MeshStandardMaterial({color:0xeeeeee}));
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(20,20),
+  new THREE.MeshStandardMaterial({color:0xeeeeee})
+);
 ground.rotation.x = -Math.PI/2;
 ground.position.y = 0;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// loader
+// load model
 const loader = new GLTFLoader();
-
 loader.load(MODEL_URL,
-  (gltf) => {
+  (gltf)=>{
     const root = gltf.scene || gltf.scenes[0];
-    // fit model to view
+    // center model
     const box = new THREE.Box3().setFromObject(root);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const center = new THREE.Vector3(); box.getCenter(center);
 
-    // move to origin (and lift so base sits at y=0)
     root.position.x -= center.x;
     root.position.z -= center.z;
     root.position.y -= box.min.y;
 
-    // scale to reasonable size
-    const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 0) {
-      const scale = 1.6 / maxDim;
-      root.scale.setScalar(scale);
-    }
+    const maxDim = Math.max(size.x,size.y,size.z);
+    if (maxDim>0) root.scale.setScalar(1.6/maxDim);
 
     scene.add(root);
     progEl.textContent = 'Loaded';
   },
-  (xhr) => {
+  (xhr)=>{
     if (xhr.total) {
-      progEl.textContent = Math.round((xhr.loaded / xhr.total) * 100) + '%';
+      progEl.textContent = Math.round((xhr.loaded/xhr.total)*100)+'%';
     } else {
-      progEl.textContent = Math.round(xhr.loaded / 1000) + ' KB';
+      progEl.textContent = Math.round(xhr.loaded/1000)+' KB';
     }
   },
-  (err) => {
-    console.error('Load error', err);
-    progEl.textContent = 'Error (see console)';
+  (err)=>{
+    console.error(err);
+    progEl.textContent = 'Error (check console)';
   }
 );
 
 // resize
-window.addEventListener('resize', () => {
+window.addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 
 // loop
-const clock = new THREE.Clock();
-function animate() {
+function animate(){
   requestAnimationFrame(animate);
   controls.update();
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 animate();
 </script>
